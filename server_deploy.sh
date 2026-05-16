@@ -8,7 +8,7 @@ REPO="https://github.com/SergeyGusev1/barbershop-site.git"
 echo "=== Place for Beauty — Deploy ==="
 
 apt-get update -y
-apt-get install -y python3 python3-pip python3-venv nginx git curl
+apt-get install -y python3 python3-pip python3-venv nginx git curl fonts-dejavu-core
 
 if [ -d "$APP_DIR" ]; then
   echo "Updating repo..."
