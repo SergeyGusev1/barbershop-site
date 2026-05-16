@@ -1,0 +1,88 @@
+#!/bin/bash
+set -e
+
+APP_DIR="/opt/placeforbeauty"
+SERVICE="placeforbeauty"
+REPO="https://github.com/SergeyGusev1/barbershop-site.git"
+
+echo "=== Place for Beauty — Deploy ==="
+
+apt-get update -y
+apt-get install -y python3 python3-pip python3-venv nginx git curl
+
+if [ -d "$APP_DIR" ]; then
+  echo "Updating repo..."
+  cd "$APP_DIR" && git pull
+else
+  echo "Cloning repo..."
+  git clone "$REPO" "$APP_DIR"
+  cd "$APP_DIR"
+fi
+
+cd "$APP_DIR"
+python3 -m venv venv
+venv/bin/pip install --upgrade pip -q
+venv/bin/pip install -r requirements.txt -q
+venv/bin/python generate_pdf.py || true
+cp admin_guide.pdf static/admin_guide.pdf 2>/dev/null || true
+
+# Find a free port starting at 8001
+APP_PORT=8001
+while ss -tlnp | grep -q ":$APP_PORT "; do
+  APP_PORT=$((APP_PORT + 1))
+done
+echo "Using app port: $APP_PORT"
+
+# Write systemd service
+cat > /etc/systemd/system/${SERVICE}.service << SVCEOF
+[Unit]
+Description=Place for Beauty FastAPI
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=${APP_DIR}
+ExecStart=${APP_DIR}/venv/bin/uvicorn main:app --host 127.0.0.1 --port ${APP_PORT}
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+systemctl daemon-reload
+systemctl enable "$SERVICE"
+systemctl restart "$SERVICE"
+sleep 5
+
+# Nginx
+NGINX_PORT=80
+if ss -tlnp | grep -q ":80 " && ! systemctl is-active --quiet nginx; then
+  NGINX_PORT=8080
+fi
+
+cat > /etc/nginx/sites-available/${SERVICE} << NGINXEOF
+server {
+    listen ${NGINX_PORT};
+    server_name _;
+    client_max_body_size 10M;
+    location / {
+        proxy_pass http://127.0.0.1:${APP_PORT};
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_read_timeout 60s;
+    }
+}
+NGINXEOF
+
+ln -sf /etc/nginx/sites-available/${SERVICE} /etc/nginx/sites-enabled/${SERVICE}
+rm -f /etc/nginx/sites-enabled/default
+nginx -t && systemctl reload nginx
+
+sleep 3
+STATUS=$(systemctl is-active "$SERVICE" || true)
+echo "=== Service status: $STATUS ==="
+echo "=== Site: http://193.164.150.235:${NGINX_PORT} ==="
+curl -s -o /dev/null -w "HTTP %{http_code}" http://127.0.0.1:${APP_PORT}/api/services || true
+echo ""
+echo "=== Deploy complete! ==="
