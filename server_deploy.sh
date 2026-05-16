@@ -26,6 +26,9 @@ venv/bin/pip install -r requirements.txt -q
 venv/bin/python generate_pdf.py || true
 cp admin_guide.pdf static/admin_guide.pdf 2>/dev/null || true
 
+# Stop existing service before port detection so its port is freed
+systemctl stop "$SERVICE" 2>/dev/null || true
+
 # Find a free port starting at 8001
 APP_PORT=8001
 while ss -tlnp | grep -q ":$APP_PORT "; do
@@ -55,15 +58,16 @@ systemctl enable "$SERVICE"
 systemctl restart "$SERVICE"
 sleep 5
 
-# Nginx
-NGINX_PORT=80
-if ss -tlnp | grep -q ":80 " && ! systemctl is-active --quiet nginx; then
-  NGINX_PORT=8080
-fi
+# Nginx — clear all existing catch-all sites, take over port 80
+rm -f /etc/nginx/sites-enabled/default
+# Disable any other enabled sites (keep only ours)
+for f in /etc/nginx/sites-enabled/*; do
+  [ "$(basename "$f")" != "$SERVICE" ] && rm -f "$f"
+done
 
 cat > /etc/nginx/sites-available/${SERVICE} << NGINXEOF
 server {
-    listen ${NGINX_PORT};
+    listen 80 default_server;
     server_name _;
     client_max_body_size 10M;
     location / {
@@ -76,7 +80,6 @@ server {
 NGINXEOF
 
 ln -sf /etc/nginx/sites-available/${SERVICE} /etc/nginx/sites-enabled/${SERVICE}
-rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 
 sleep 3
