@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админ — Place for Beauty</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="logo-gold">Place</span> <span class="logo-dim">for</span> <span class="logo-gold">Beauty</span>
+    </div>
+    <p class="login-sub">Панель управления</p>
+    <form class="login-form" id="loginForm">
+      <div class="field">
+        <label>Логин</label>
+        <input type="text" id="loginUser" placeholder="admin" required>
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input type="password" id="loginPass" placeholder="••••••••" required>
+      </div>
+      <div class="login-error" id="loginError"></div>
+      <button type="submit" class="btn-gold">Войти</button>
+    </form>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div class="admin-app hidden" id="adminApp">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar__logo">
+      <span class="logo-gold">PfB</span>
+      <span class="sidebar__subtitle">Админ</span>
+    </div>
+    <nav class="sidebar__nav">
+      <a class="sidebar__link active" onclick="showPage('services')" href="#">
+        <span>✂️</span> Услуги
+      </a>
+      <a class="sidebar__link" onclick="showPage('categories')" href="#">
+        <span>📂</span> Категории
+      </a>
+    </nav>
+    <button class="sidebar__logout" onclick="logout()">Выйти</button>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+
+    <!-- Header -->
+    <div class="admin-header">
+      <div>
+        <h1 class="admin-title" id="pageTitle">Управление услугами</h1>
+        <p class="admin-desc" id="pageDesc">Добавляйте, редактируйте и удаляйте услуги из прайс-листа</p>
+      </div>
+      <button class="btn-gold" id="addBtn" onclick="openAddModal()">+ Добавить</button>
+    </div>
+
+    <!-- SERVICES PAGE -->
+    <div id="servicesPage">
+      <!-- Category filter -->
+      <div class="filter-bar">
+        <select id="catFilter" onchange="filterServices()">
+          <option value="">Все категории</option>
+        </select>
+        <input type="text" id="searchInput" placeholder="Поиск по названию..." oninput="filterServices()">
+      </div>
+      <div id="servicesList" class="items-list"></div>
+    </div>
+
+    <!-- CATEGORIES PAGE -->
+    <div id="categoriesPage" class="hidden">
+      <div id="categoriesList" class="items-list"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODALS -->
+<!-- Add/Edit Service -->
+<div class="modal-overlay hidden" id="serviceModal">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="serviceModalTitle">Добавить услугу</h2>
+      <button class="modal__close" onclick="closeModal('serviceModal')">✕</button>
+    </div>
+    <form id="serviceForm">
+      <input type="hidden" id="serviceId">
+      <div class="field">
+        <label>Категория *</label>
+        <select id="serviceCatId" required></select>
+      </div>
+      <div class="field">
+        <label>Название услуги *</label>
+        <input type="text" id="serviceName" placeholder="Например: Стрижка короткая" required>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Префикс цены</label>
+          <input type="text" id="servicePrefix" placeholder="от ">
+        </div>
+        <div class="field">
+          <label>Цена *</label>
+          <input type="text" id="servicePrice" placeholder="1 500" required>
+        </div>
+      </div>
+      <div class="field">
+        <label>Описание</label>
+        <textarea id="serviceDesc" rows="2" placeholder="Необязательно"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Порядок</label>
+          <input type="number" id="serviceOrder" value="0">
+        </div>
+        <div class="field field--check">
+          <label class="check-label">
+            <input type="checkbox" id="serviceActive" checked>
+            <span>Активна</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn-outline" onclick="closeModal('serviceModal')">Отмена</button>
+        <button type="submit" class="btn-gold" id="serviceSubmitBtn">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add/Edit Category -->
+<div class="modal-overlay hidden" id="catModal">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="catModalTitle">Добавить категорию</h2>
+      <button class="modal__close" onclick="closeModal('catModal')">✕</button>
+    </div>
+    <form id="catForm">
+      <input type="hidden" id="catId">
+      <div class="field">
+        <label>Название *</label>
+        <input type="text" id="catName" placeholder="Например: Маникюр" required>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Slug (уникальный ID)</label>
+          <input type="text" id="catSlug" placeholder="manikur">
+        </div>
+        <div class="field">
+          <label>Иконка (эмодзи)</label>
+          <input type="text" id="catIcon" placeholder="💅">
+        </div>
+      </div>
+      <div class="field">
+        <label>Порядок</label>
+        <input type="number" id="catOrder" value="0">
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn-outline" onclick="closeModal('catModal')">Отмена</button>
+        <button type="submit" class="btn-gold">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Confirm delete -->
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal modal--sm">
+    <div class="modal__header">
+      <h2 class="modal__title">Удалить?</h2>
+      <button class="modal__close" onclick="closeModal('confirmModal')">✕</button>
+    </div>
+    <p class="confirm-text" id="confirmText">Это действие нельзя отменить.</p>
+    <div class="modal__footer">
+      <button class="btn-outline" onclick="closeModal('confirmModal')">Отмена</button>
+      <button class="btn-danger" id="confirmBtn">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="/js/admin.js"></script>
+</body>
+</html>

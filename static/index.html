@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Place for Beauty — Салон красоты</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- Particles canvas -->
+<canvas id="particles"></canvas>
+
+<!-- Nav -->
+<nav class="nav" id="nav">
+  <div class="nav__inner">
+    <a href="#hero" class="nav__logo">
+      <span class="nav__logo-place">Place</span>
+      <span class="nav__logo-for">for</span>
+      <span class="nav__logo-beauty">Beauty</span>
+    </a>
+    <div class="nav__links">
+      <a href="#services" class="nav__link">Услуги</a>
+      <a href="#contacts" class="nav__link">Контакты</a>
+      <a href="https://vk.ru/placeforbeauty42" target="_blank" class="nav__link nav__link--vk">ВКонтакте</a>
+    </div>
+    <button class="nav__burger" id="burger" aria-label="Меню">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#services" class="mobile-menu__link" onclick="closeMobile()">Услуги</a>
+  <a href="#contacts" class="mobile-menu__link" onclick="closeMobile()">Контакты</a>
+  <a href="https://vk.ru/placeforbeauty42" target="_blank" class="mobile-menu__link">ВКонтакте</a>
+</div>
+
+<!-- Hero -->
+<section class="hero" id="hero">
+  <div class="hero__bg">
+    <div class="hero__orb hero__orb--1"></div>
+    <div class="hero__orb hero__orb--2"></div>
+    <div class="hero__orb hero__orb--3"></div>
+  </div>
+  <div class="hero__content">
+    <p class="hero__pre">Салон красоты</p>
+    <h1 class="hero__title">
+      <span class="hero__title-line">Place</span>
+      <span class="hero__title-line hero__title-line--gold">for Beauty</span>
+    </h1>
+    <p class="hero__sub">Кемерово · Запись по записи</p>
+    <div class="hero__actions">
+      <a href="#services" class="btn btn--gold">Смотреть услуги</a>
+      <a href="https://vk.ru/placeforbeauty42" target="_blank" class="btn btn--outline">Записаться</a>
+    </div>
+  </div>
+  <div class="hero__scroll">
+    <span></span>
+  </div>
+</section>
+
+<!-- Services -->
+<section class="services" id="services">
+  <div class="services__header">
+    <p class="section-pre">Наши услуги</p>
+    <h2 class="section-title">Прайс-лист</h2>
+    <div class="gold-line"></div>
+  </div>
+
+  <!-- Category tabs -->
+  <div class="tabs-wrap">
+    <div class="tabs" id="tabs"></div>
+  </div>
+
+  <!-- Price cards -->
+  <div class="price-grid" id="priceGrid">
+    <div class="price-loading">
+      <div class="spinner"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Divider -->
+<div class="divider-section">
+  <div class="divider-text">
+    <span>Красота</span>
+    <span class="divider-dot">◆</span>
+    <span>Стиль</span>
+    <span class="divider-dot">◆</span>
+    <span>Мастерство</span>
+  </div>
+</div>
+
+<!-- Contacts -->
+<section class="contacts" id="contacts">
+  <div class="contacts__inner">
+    <div class="contacts__info">
+      <p class="section-pre">Мы здесь</p>
+      <h2 class="section-title">Контакты</h2>
+      <div class="gold-line"></div>
+      <ul class="contacts__list">
+        <li class="contacts__item">
+          <span class="contacts__icon">📍</span>
+          <span>Кемерово</span>
+        </li>
+        <li class="contacts__item">
+          <span class="contacts__icon">💬</span>
+          <a href="https://vk.ru/placeforbeauty42" target="_blank">ВКонтакте — @placeforbeauty42</a>
+        </li>
+        <li class="contacts__item">
+          <span class="contacts__icon">🕐</span>
+          <span>Запись по записи</span>
+        </li>
+      </ul>
+      <a href="https://vk.ru/placeforbeauty42" target="_blank" class="btn btn--gold" style="margin-top:2rem">Записаться в ВК</a>
+    </div>
+    <div class="contacts__quote">
+      <blockquote>
+        <p>Красивые волосы не получаются по случайности — их делают по записи</p>
+        <cite>— Place for Beauty</cite>
+      </blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer__inner">
+    <div class="footer__logo">Place for Beauty</div>
+    <p class="footer__copy">© 2024 Place for Beauty · Все права защищены</p>
+    <a href="/admin.html" class="footer__admin">Админ</a>
+  </div>
+</footer>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
