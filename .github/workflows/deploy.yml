@@ -1,0 +1,78 @@
+name: Deploy to VPS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 193.164.150.235
+          username: root
+          password: ${{ secrets.SSH_PASS }}
+          port: 22
+          command_timeout: 15m
+          script: |
+            set -e
+            echo "=== Starting deploy ==="
+            apt-get update -y
+            apt-get install -y python3 python3-pip python3-venv nginx git curl
+
+            if [ -d /opt/placeforbeauty ]; then
+              cd /opt/placeforbeauty && git pull
+            else
+              git clone https://github.com/SergeyGusev1/barbershop-site.git /opt/placeforbeauty
+              cd /opt/placeforbeauty
+            fi
+
+            cd /opt/placeforbeauty
+            python3 -m venv venv
+            venv/bin/pip install --upgrade pip -q
+            venv/bin/pip install -r requirements.txt -q
+            venv/bin/python generate_pdf.py || true
+            cp admin_guide.pdf static/admin_guide.pdf 2>/dev/null || true
+
+            cat > /etc/systemd/system/placeforbeauty.service << 'EOF'
+            [Unit]
+            Description=Place for Beauty FastAPI
+            After=network.target
+
+            [Service]
+            User=root
+            WorkingDirectory=/opt/placeforbeauty
+            ExecStart=/opt/placeforbeauty/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+            Restart=always
+            RestartSec=3
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+
+            systemctl daemon-reload
+            systemctl enable placeforbeauty
+            systemctl restart placeforbeauty
+            sleep 3
+
+            cat > /etc/nginx/sites-available/placeforbeauty << 'EOF'
+            server {
+                listen 80;
+                server_name _;
+                client_max_body_size 10M;
+                location / {
+                    proxy_pass http://127.0.0.1:8000;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_read_timeout 60s;
+                }
+            }
+            EOF
+
+            ln -sf /etc/nginx/sites-available/placeforbeauty /etc/nginx/sites-enabled/placeforbeauty
+            rm -f /etc/nginx/sites-enabled/default
+            nginx -t && systemctl reload nginx
+
+            echo "=== Done! Site: http://193.164.150.235 ==="
+            systemctl is-active placeforbeauty
