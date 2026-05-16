@@ -26,8 +26,13 @@ venv/bin/pip install -r requirements.txt -q
 venv/bin/python generate_pdf.py || true
 cp admin_guide.pdf static/admin_guide.pdf 2>/dev/null || true
 
+# Test that main.py can be imported (catches syntax/import errors early)
+echo "--- Testing app import ---"
+venv/bin/python -c "import main; print('Import OK')"
+
 # Stop existing service before port detection so its port is freed
 systemctl stop "$SERVICE" 2>/dev/null || true
+sleep 2
 
 # Find a free port starting at 8001
 APP_PORT=8001
@@ -65,14 +70,13 @@ for i in $(seq 1 10); do
   [ "$ST" = "active" ] && break
 done
 
-if [ "$(systemctl is-active "$SERVICE" || true)" != "active" ]; then
-  echo "!!! Service failed to start — last 30 lines of journal:"
-  journalctl -u "$SERVICE" -n 30 --no-pager || true
-fi
+# Always print last journal lines for diagnostics
+echo "--- Journal (last 20 lines) ---"
+journalctl -u "$SERVICE" -n 20 --no-pager || true
+echo "---"
 
 # Nginx — clear all existing catch-all sites, take over port 80
 rm -f /etc/nginx/sites-enabled/default
-# Disable any other enabled sites (keep only ours)
 for f in /etc/nginx/sites-enabled/*; do
   [ "$(basename "$f")" != "$SERVICE" ] && rm -f "$f"
 done
@@ -97,7 +101,7 @@ nginx -t && systemctl reload nginx
 sleep 3
 STATUS=$(systemctl is-active "$SERVICE" || true)
 echo "=== Service status: $STATUS ==="
-echo "=== Site: http://193.164.150.235:${NGINX_PORT} ==="
 curl -s -o /dev/null -w "HTTP %{http_code}" http://127.0.0.1:${APP_PORT}/api/services || true
 echo ""
+echo "=== Site: http://193.164.150.235 ==="
 echo "=== Deploy complete! ==="
