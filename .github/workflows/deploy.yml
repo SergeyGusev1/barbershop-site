@@ -25,7 +25,6 @@ jobs:
               cd /opt/placeforbeauty && git pull
             else
               git clone https://github.com/SergeyGusev1/barbershop-site.git /opt/placeforbeauty
-              cd /opt/placeforbeauty
             fi
 
             cd /opt/placeforbeauty
@@ -35,44 +34,59 @@ jobs:
             venv/bin/python generate_pdf.py || true
             cp admin_guide.pdf static/admin_guide.pdf 2>/dev/null || true
 
-            cat > /etc/systemd/system/placeforbeauty.service << 'EOF'
-            [Unit]
-            Description=Place for Beauty FastAPI
-            After=network.target
+            # Find a free port (8001 or above)
+            APP_PORT=8001
+            while ss -tlnp | grep -q ":$APP_PORT "; do
+              APP_PORT=$((APP_PORT + 1))
+            done
+            echo "Using port: $APP_PORT"
 
-            [Service]
-            User=root
-            WorkingDirectory=/opt/placeforbeauty
-            ExecStart=/opt/placeforbeauty/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
-            Restart=always
-            RestartSec=3
+            cat > /etc/systemd/system/placeforbeauty.service << EOF
+[Unit]
+Description=Place for Beauty FastAPI
+After=network.target
 
-            [Install]
-            WantedBy=multi-user.target
-            EOF
+[Service]
+User=root
+WorkingDirectory=/opt/placeforbeauty
+ExecStart=/opt/placeforbeauty/venv/bin/uvicorn main:app --host 127.0.0.1 --port $APP_PORT
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
             systemctl daemon-reload
             systemctl enable placeforbeauty
             systemctl restart placeforbeauty
-            sleep 3
+            sleep 5
 
-            cat > /etc/nginx/sites-available/placeforbeauty << 'EOF'
-            server {
-                listen 80;
-                server_name _;
-                client_max_body_size 10M;
-                location / {
-                    proxy_pass http://127.0.0.1:8000;
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_read_timeout 60s;
-                }
-            }
-            EOF
+            # Get nginx listen port (avoid port 80 if already taken by other app)
+            NGINX_PORT=80
+            if ss -tlnp | grep -q ":80 " && ! systemctl is-active --quiet nginx; then
+              NGINX_PORT=8080
+            fi
+
+            cat > /etc/nginx/sites-available/placeforbeauty << EOF
+server {
+    listen $NGINX_PORT;
+    server_name _;
+    client_max_body_size 10M;
+    location / {
+        proxy_pass http://127.0.0.1:$APP_PORT;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_read_timeout 60s;
+    }
+}
+EOF
 
             ln -sf /etc/nginx/sites-available/placeforbeauty /etc/nginx/sites-enabled/placeforbeauty
-            rm -f /etc/nginx/sites-enabled/default
             nginx -t && systemctl reload nginx
 
-            echo "=== Done! Site: http://193.164.150.235 ==="
-            systemctl is-active placeforbeauty
+            sleep 3
+            STATUS=$(systemctl is-active placeforbeauty || true)
+            echo "=== Service status: $STATUS ==="
+            echo "=== Site: http://193.164.150.235:$NGINX_PORT ==="
+            curl -s -o /dev/null -w "HTTP %{http_code}" http://127.0.0.1:$APP_PORT/api/services || true
