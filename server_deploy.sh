@@ -56,7 +56,19 @@ SVCEOF
 systemctl daemon-reload
 systemctl enable "$SERVICE"
 systemctl restart "$SERVICE"
-sleep 5
+
+# Wait up to 30s for service to become active
+for i in $(seq 1 10); do
+  sleep 3
+  ST=$(systemctl is-active "$SERVICE" || true)
+  echo "  [${i}] service: $ST"
+  [ "$ST" = "active" ] && break
+done
+
+if [ "$(systemctl is-active "$SERVICE" || true)" != "active" ]; then
+  echo "!!! Service failed to start — last 30 lines of journal:"
+  journalctl -u "$SERVICE" -n 30 --no-pager || true
+fi
 
 # Nginx — clear all existing catch-all sites, take over port 80
 rm -f /etc/nginx/sites-enabled/default
