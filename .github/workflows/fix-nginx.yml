@@ -16,9 +16,13 @@ jobs:
           port: 22
           command_timeout: 5m
           script: |
-            echo "=== Restoring nginx site configs ==="
+            echo "=== Fix placeforbeauty nginx config (no default_server, IP-only) ==="
+            sed -i 's/listen 80 default_server;/listen 80;/' /etc/nginx/sites-available/placeforbeauty
+            sed -i 's/server_name _;/server_name 193.164.150.235;/' /etc/nginx/sites-available/placeforbeauty
+            echo "--- placeforbeauty config after fix ---"
+            cat /etc/nginx/sites-available/placeforbeauty
 
-            # Re-enable all existing sites
+            echo "=== Re-enable all sites ==="
             for site in automir integra leadcrm; do
               if [ -f "/etc/nginx/sites-available/$site" ]; then
                 ln -sf "/etc/nginx/sites-available/$site" "/etc/nginx/sites-enabled/$site"
@@ -26,32 +30,17 @@ jobs:
               fi
             done
 
-            # Fix placeforbeauty — serve ONLY on direct IP, not as catch-all
-            cat > /etc/nginx/sites-available/placeforbeauty << 'NGINXEOF'
-            server {
-                listen 80;
-                server_name 193.164.150.235;
-                client_max_body_size 10M;
-                location / {
-                    proxy_pass http://127.0.0.1:8001;
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_read_timeout 60s;
-                }
-            }
-            NGINXEOF
-
-            echo "=== nginx sites-enabled after fix ==="
+            echo "=== sites-enabled ==="
             ls -la /etc/nginx/sites-enabled/
 
-            echo "=== Testing nginx config ==="
+            echo "=== nginx -t ==="
             nginx -t
 
-            echo "=== Reloading nginx ==="
+            echo "=== reload nginx ==="
             systemctl reload nginx
 
-            echo "=== Checking sites ==="
-            curl -s -o /dev/null -w "IP 193.164.150.235 -> HTTP %{http_code}\n" http://127.0.0.1/ -H "Host: 193.164.150.235" || true
-            curl -s -o /dev/null -w "integradevelop.online -> HTTP %{http_code}\n" http://127.0.0.1/ -H "Host: integradevelop.online" || true
-
+            echo "=== Check domains ==="
+            curl -s -o /dev/null -w "193.164.150.235 (IP) -> HTTP %{http_code}\n" http://127.0.0.1/ -H "Host: 193.164.150.235"
+            curl -s -o /dev/null -w "integradevelop.ru -> HTTP %{http_code}\n" http://127.0.0.1/ -H "Host: integradevelop.ru"
+            curl -s -o /dev/null -w "integradevelop.online -> HTTP %{http_code}\n" http://127.0.0.1/ -H "Host: integradevelop.online"
             echo "=== Done ==="
