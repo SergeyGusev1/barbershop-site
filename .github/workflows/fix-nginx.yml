@@ -1,0 +1,57 @@
+name: Fix nginx configs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restore nginx sites and fix placeforbeauty config
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 193.164.150.235
+          username: root
+          password: ${{ secrets.SSH_PASS }}
+          port: 22
+          command_timeout: 5m
+          script: |
+            echo "=== Restoring nginx site configs ==="
+
+            # Re-enable all existing sites
+            for site in automir integra leadcrm; do
+              if [ -f "/etc/nginx/sites-available/$site" ]; then
+                ln -sf "/etc/nginx/sites-available/$site" "/etc/nginx/sites-enabled/$site"
+                echo "Enabled: $site"
+              fi
+            done
+
+            # Fix placeforbeauty — serve ONLY on direct IP, not as catch-all
+            cat > /etc/nginx/sites-available/placeforbeauty << 'NGINXEOF'
+            server {
+                listen 80;
+                server_name 193.164.150.235;
+                client_max_body_size 10M;
+                location / {
+                    proxy_pass http://127.0.0.1:8001;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_read_timeout 60s;
+                }
+            }
+            NGINXEOF
+
+            echo "=== nginx sites-enabled after fix ==="
+            ls -la /etc/nginx/sites-enabled/
+
+            echo "=== Testing nginx config ==="
+            nginx -t
+
+            echo "=== Reloading nginx ==="
+            systemctl reload nginx
+
+            echo "=== Checking sites ==="
+            curl -s -o /dev/null -w "IP 193.164.150.235 -> HTTP %{http_code}\n" http://127.0.0.1/ -H "Host: 193.164.150.235" || true
+            curl -s -o /dev/null -w "integradevelop.online -> HTTP %{http_code}\n" http://127.0.0.1/ -H "Host: integradevelop.online" || true
+
+            echo "=== Done ==="

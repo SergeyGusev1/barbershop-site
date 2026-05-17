@@ -75,16 +75,11 @@ echo "--- Journal (last 20 lines) ---"
 journalctl -u "$SERVICE" -n 20 --no-pager || true
 echo "---"
 
-# Nginx — clear all existing catch-all sites, take over port 80
-rm -f /etc/nginx/sites-enabled/default
-for f in /etc/nginx/sites-enabled/*; do
-  [ "$(basename "$f")" != "$SERVICE" ] && rm -f "$f"
-done
-
+# Nginx — only manage our own config, don't touch other sites
 cat > /etc/nginx/sites-available/${SERVICE} << NGINXEOF
 server {
-    listen 80 default_server;
-    server_name _;
+    listen 80;
+    server_name 193.164.150.235;
     client_max_body_size 10M;
     location / {
         proxy_pass http://127.0.0.1:${APP_PORT};
