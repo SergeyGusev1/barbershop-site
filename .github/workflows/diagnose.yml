@@ -1,0 +1,44 @@
+name: Diagnose VPS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check server state
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 193.164.150.235
+          username: root
+          password: ${{ secrets.SSH_PASS }}
+          port: 22
+          command_timeout: 5m
+          script: |
+            echo "=== NGINX sites-available ==="
+            ls -la /etc/nginx/sites-available/
+            echo ""
+            echo "=== NGINX sites-enabled ==="
+            ls -la /etc/nginx/sites-enabled/
+            echo ""
+            echo "=== sites-available content ==="
+            for f in /etc/nginx/sites-available/*; do echo "--- $f ---"; cat "$f"; done
+            echo ""
+            echo "=== Running services (web) ==="
+            systemctl list-units --type=service --state=running | grep -E "(nginx|apache|node|python|uvicorn|php|ruby|caddy|auto)" | head -20
+            echo ""
+            echo "=== All systemd services ==="
+            systemctl list-units --type=service --state=running | head -40
+            echo ""
+            echo "=== Listening ports ==="
+            ss -tlnp | grep -E ":(80|443|8000|8001|8080|3000|5000)"
+            echo ""
+            echo "=== /var/www contents ==="
+            ls -la /var/www/ 2>/dev/null || echo "no /var/www"
+            echo ""
+            echo "=== /opt contents ==="
+            ls -la /opt/ 2>/dev/null
+            echo ""
+            echo "=== /home contents ==="
+            ls /home/ 2>/dev/null
